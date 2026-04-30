@@ -1,0 +1,36 @@
+@page "/faculty/courses"
+@inject ICourseService CourseService
+@inject NavigationManager Navigation
+
+<h3>My Teaching Schedule</h3>
+
+<div class="row mt-4">
+    @foreach (var course in MyCourses)
+    {
+        <div class="col-md-4">
+            <CourseCard Course="course" ShowEnrollButton="false" />
+        </div>
+    }
+    @if (!MyCourses.Any())
+    {
+        <div class="col-12 text-center py-5">
+            <p class="text-muted lead">You are not assigned to any courses yet.</p>
+        </div>
+    }
+</div>
+
+@code {
+    [CascadingParameter] public IAuthService AuthState { get; set; }
+    private IEnumerable<Course> MyCourses = new List<Course>();
+
+    protected override void OnInitialized()
+    {
+        if (!AuthState.IsLoggedIn || AuthState.CurrentUser.Role != Role.Faculty)
+        {
+            Navigation.NavigateTo("/unauthorized");
+            return;
+        }
+
+        MyCourses = CourseService.GetCoursesByFaculty(AuthState.CurrentUser.Id);
+    }
+}

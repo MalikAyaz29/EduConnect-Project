@@ -1,0 +1,29 @@
+@page "/courses"
+@inject ICourseService CourseService
+
+<h3>Course Catalog</h3>
+<p class="text-muted">Browse all courses available in the system.</p>
+
+<div class="row mt-4">
+    @foreach (var course in AllCourses)
+    {
+        <div class="col-md-4 mb-3">
+            <CourseCard Course="course" ShowEnrollButton="false" />
+        </div>
+    }
+    @if (!AllCourses.Any())
+    {
+        <div class="col-12 text-center py-5">
+            <p class="text-muted lead">The course catalog is currently empty.</p>
+        </div>
+    }
+</div>
+
+@code {
+    private IEnumerable<Course> AllCourses = new List<Course>();
+
+    protected override void OnInitialized()
+    {
+        AllCourses = CourseService.GetAllCourses();
+    }
+}

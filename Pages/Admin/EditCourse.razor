@@ -1,0 +1,63 @@
+@page "/admin/courses/edit/{id:guid}"
+@inject IRepository<Course> CourseRepo
+@inject NavigationManager Navigation
+
+<h3>Edit Course</h3>
+
+@if (Course != null)
+{
+    <div class="card mt-4 shadow-sm border-0">
+        <div class="card-body p-4">
+            <FormInput Label="Course Code" @bind-Value="Course.Code" />
+            <FormInput Label="Course Name" @bind-Value="Course.Name" />
+            
+            <div class="mb-3">
+                <label class="form-label fw-bold">Credit Hours</label>
+                <input type="number" class="form-control" @bind="Course.CreditHours" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold">Max Capacity</label>
+                <input type="number" class="form-control" @bind="Course.MaxCapacity" />
+            </div>
+            
+            <button class="btn btn-primary" @onclick="UpdateCourse">Update</button>
+            <button class="btn btn-secondary ms-2" @onclick='() => Navigation.NavigateTo("/admin/courses")'>Cancel</button>
+        </div>
+    </div>
+}
+
+@code {
+    [CascadingParameter] public IAuthService AuthState { get; set; }
+    [Parameter] public Guid Id { get; set; }
+    private Course Course { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (!AuthState.IsLoggedIn || AuthState.CurrentUser.Role != Role.Admin)
+        {
+            Navigation.NavigateTo("/unauthorized");
+            return;
+        }
+
+        var existing = CourseRepo.GetById(Id);
+        if (existing != null)
+        {
+            Course = new Course
+            {
+                Id = existing.Id,
+                Code = existing.Code,
+                Name = existing.Name,
+                CreditHours = existing.CreditHours,
+                MaxCapacity = existing.MaxCapacity,
+                FacultyId = existing.FacultyId,
+                CurrentEnrollmentCount = existing.CurrentEnrollmentCount
+            };
+        }
+    }
+
+    private void UpdateCourse()
+    {
+        CourseRepo.Update(Course);
+        Navigation.NavigateTo("/admin/courses");
+    }
+}

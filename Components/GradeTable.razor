@@ -1,0 +1,56 @@
+@inject ICourseService CourseService
+
+<div class="table-responsive">
+    <table class="table table-hover table-bordered align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>Course</th>
+                <th>Marks</th>
+                <th>Letter Grade</th>
+                <th>Points (CGPA)</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (!Grades.Any())
+            {
+                <tr>
+                    <td colspan="4" class="text-center text-muted">No grades recorded yet.</td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var grade in Grades)
+                {
+                    <tr class="@GetRowClass(grade.LetterGrade)">
+                        <td>@GetCourseName(grade.CourseId)</td>
+                        <td>@grade.Marks</td>
+                        <td><strong>@grade.LetterGrade</strong></td>
+                        <td>@grade.GradePoints</td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter] public IEnumerable<GradeRecord> Grades { get; set; } = new List<GradeRecord>();
+
+    private string GetCourseName(Guid courseId)
+    {
+        var course = CourseService.GetCourseById(courseId);
+        return course != null ? $"{course.Code} - {course.Name}" : "Unknown Course";
+    }
+
+    private string GetRowClass(string letterGrade)
+    {
+        // Business Rule: Student page shows grades with colors
+        return letterGrade switch
+        {
+            "A" or "B" => "table-success",  // Green
+            "C" or "D" => "table-warning",  // Yellow
+            "F" => "table-danger",          // Red
+            _ => ""
+        };
+    }
+}

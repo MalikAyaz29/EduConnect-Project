@@ -1,0 +1,52 @@
+@page "/student/grades"
+@inject IGradeService GradeService
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<h3>My Grades</h3>
+
+<div class="card mb-4 border-0 shadow-sm bg-light mt-4">
+    <div class="card-body text-center p-4">
+        <h5 class="text-primary mb-3">Cumulative Grade Point Average</h5>
+        <div class="display-3 fw-bold text-success">
+            @CGPA.ToString("F2")
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <GradeTable Grades="MyGrades" />
+    </div>
+</div>
+
+@code {
+    [CascadingParameter] public IAuthService AuthState { get; set; }
+    private IEnumerable<GradeRecord> MyGrades = new List<GradeRecord>();
+    private double CGPA = 0.0;
+
+    protected override void OnInitialized()
+    {
+        if (!AuthState.IsLoggedIn || AuthState.CurrentUser.Role != Role.Student)
+        {
+            Navigation.NavigateTo("/unauthorized");
+            return;
+        }
+
+        GradeService.OnGradesSubmitted += RefreshData;
+        RefreshData();
+    }
+
+    private void RefreshData()
+    {
+        var studentId = AuthState.CurrentUser.Id;
+        MyGrades = GradeService.GetGradesByStudent(studentId);
+        CGPA = GradeService.CalculateCGPA(studentId);
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        GradeService.OnGradesSubmitted -= RefreshData;
+    }
+}

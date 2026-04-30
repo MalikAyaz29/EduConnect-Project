@@ -1,0 +1,40 @@
+@inject IAuthService AuthState
+@inject NavigationManager Navigation
+@implements IDisposable
+
+@if (IsAuthorized)
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter] public RenderFragment ChildContent { get; set; }
+    [Parameter] public Role[] AllowedRoles { get; set; }
+
+    private bool IsAuthorized => AuthState.IsLoggedIn && (AllowedRoles == null || AllowedRoles.Length == 0 || AllowedRoles.Contains(AuthState.CurrentUser.Role));
+
+    protected override void OnInitialized()
+    {
+        AuthState.OnLogin += () => InvokeAsync(StateHasChanged);
+        AuthState.OnLogout += () => InvokeAsync(StateHasChanged);
+        CheckAccess();
+    }
+
+    private void CheckAccess()
+    {
+        if (!AuthState.IsLoggedIn)
+        {
+            Navigation.NavigateTo("/login");
+        }
+        else if (AllowedRoles != null && AllowedRoles.Length > 0 && !AllowedRoles.Contains(AuthState.CurrentUser.Role))
+        {
+            Navigation.NavigateTo("/unauthorized");
+        }
+    }
+
+    public void Dispose()
+    {
+        AuthState.OnLogin -= () => InvokeAsync(StateHasChanged);
+        AuthState.OnLogout -= () => InvokeAsync(StateHasChanged);
+    }
+}

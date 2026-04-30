@@ -1,0 +1,83 @@
+@page "/dashboard"
+@inject NavigationManager Navigation
+
+@if (!AuthState.IsLoggedIn)
+{
+    <AlertBox Message="Please login to access the dashboard." Type="AlertType.Warning" />
+}
+else
+{
+    <div class="mt-4">
+        <h2>Welcome to your Dashboard, @AuthState.CurrentUser.FirstName!</h2>
+        <p class="lead">You are logged in as a <strong>@AuthState.CurrentUser.Role</strong>.</p>
+        <hr />
+        
+        <div class="row mt-4">
+            @if (AuthState.CurrentUser.Role == Role.Admin)
+            {
+                <div class="col-md-4 mb-3">
+                    <div class="card bg-light shadow-sm h-100 border-primary border-top border-4">
+                        <div class="card-body">
+                            <h5>Manage Students</h5>
+                            <p class="text-muted">View, add, edit, or remove student records.</p>
+                            <a href="/admin/students" class="btn btn-outline-primary">Go to Students</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card bg-light shadow-sm h-100 border-warning border-top border-4">
+                        <div class="card-body">
+                            <h5>Manage Courses</h5>
+                            <p class="text-muted">Configure course catalog.</p>
+                            <a href="/admin/courses" class="btn btn-outline-warning">Go to Courses</a>
+                        </div>
+                    </div>
+                </div>
+            }
+            @if (AuthState.CurrentUser.Role == Role.Faculty)
+            {
+                <div class="col-md-4 mb-3">
+                    <div class="card bg-light shadow-sm h-100 border-success border-top border-4">
+                        <div class="card-body">
+                            <h5>Manage Grades</h5>
+                            <p class="text-muted">Enter grades for your enrolled students.</p>
+                            <a href="/faculty/grades" class="btn btn-outline-success">Go to Grades</a>
+                        </div>
+                    </div>
+                </div>
+            }
+            @if (AuthState.CurrentUser.Role == Role.Student)
+            {
+                <div class="col-md-4 mb-3">
+                    <div class="card bg-light shadow-sm h-100 border-info border-top border-4">
+                        <div class="card-body">
+                            <h5>My Grades</h5>
+                            <p class="text-muted">View your grades and CGPA.</p>
+                            <a href="/student/grades" class="btn btn-outline-info">Go to Grades</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card bg-light shadow-sm h-100 border-success border-top border-4">
+                        <div class="card-body">
+                            <h5>Enroll in Courses</h5>
+                            <p class="text-muted">Register for new classes.</p>
+                            <a href="/student/enroll" class="btn btn-outline-success">Enroll Now</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [CascadingParameter] public IAuthService AuthState { get; set; }
+    protected override void OnInitialized()
+    {
+        if (!AuthState.IsLoggedIn)
+        {
+            Navigation.NavigateTo("/login");
+        }
+    }
+}

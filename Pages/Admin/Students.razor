@@ -1,0 +1,117 @@
+@page "/admin/students"
+@inject IStudentService StudentService
+@inject NavigationManager Navigation
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Manage Students</h3>
+    <a href="/admin/students/add" class="btn btn-primary">+ Add New Student</a>
+</div>
+
+@if (ErrorMessage != null)
+{
+    <AlertBox Message="@ErrorMessage" Type="AlertType.Error" OnClose="() => ErrorMessage = null" />
+}
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="input-group">
+            <span class="input-group-text bg-white">🔍</span>
+            <input type="text" class="form-control" placeholder="Search by name or email..." @bind="SearchTerm" @bind:event="oninput" />
+        </div>
+    </div>
+</div>
+
+<LoadingSpinner IsVisible="IsLoading" />
+
+@if (!IsLoading)
+{
+    <div class="row">
+        @foreach (var student in FilteredStudents)
+        {
+            <div class="col-md-4">
+                <StudentCard Student="student" OnEdit="EditStudent" OnDelete="PromptDelete" />
+                <div class="text-end mb-3 mt-n2">
+                    <a href="/admin/students/@student.Id" class="text-decoration-none small text-secondary">View Details &rarr;</a>
+                </div>
+            </div>
+        }
+        @if (!FilteredStudents.Any())
+        {
+            <div class="col-12"><p class="text-muted text-center py-5">No students found matching your criteria.</p></div>
+        }
+    </div>
+}
+
+<ConfirmDialog @ref="DeleteDialog" Title="Delete Student" Message="Are you sure you want to completely remove this student record?" OnConfirm="OnDeleteConfirm" />
+
+@code {
+    [CascadingParameter] public IAuthService AuthState { get; set; }
+    private IEnumerable<Student> AllStudents = new List<Student>();
+    private string _searchTerm = "";
+    private bool IsLoading = true;
+    private ConfirmDialog DeleteDialog;
+    private Student StudentToDelete;
+    private string ErrorMessage;
+
+    private string SearchTerm
+    {
+        get => _searchTerm;
+        set
+        {
+            _searchTerm = value;
+            StateHasChanged();
+        }
+    }
+
+    private IEnumerable<Student> FilteredStudents => string.IsNullOrWhiteSpace(SearchTerm) 
+        ? AllStudents 
+        : AllStudents.Where(s => s.FullName.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) || s.Email.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthState.IsLoggedIn || AuthState.CurrentUser.Role != Role.Admin)
+        {
+            Navigation.NavigateTo("/unauthorized");
+            return;
+        }
+
+        await LoadStudents();
+    }
+
+    private async Task LoadStudents()
+    {
+        IsLoading = true;
+        await Task.Delay(300); // Simulate loading for UI smoothness
+        AllStudents = StudentService.GetAllStudents().ToList();
+        IsLoading = false;
+    }
+
+    private void EditStudent(Student student)
+    {
+        Navigation.NavigateTo($"/admin/students/edit/{student.Id}");
+    }
+
+    private void PromptDelete(Student student)
+    {
+        StudentToDelete = student;
+        ErrorMessage = null;
+        DeleteDialog.Show();
+    }
+
+    private void OnDeleteConfirm(bool confirmed)
+    {
+        if (confirmed && StudentToDelete != null)
+        {
+            try
+            {
+                StudentService.DeleteStudent(StudentToDelete.Id);
+                AllStudents = StudentService.GetAllStudents().ToList();
+            }
+            catch (StudentHasActiveEnrollmentsException ex)
+            {
+                ErrorMessage = ex.Message;
+            }
+        }
+        StudentToDelete = null;
+    }
+}

@@ -1,0 +1,90 @@
+@inject INotificationService NotificationService
+@implements IDisposable
+
+<div class="dropdown d-inline-block">
+    <button class="btn btn-link text-light position-relative text-decoration-none" type="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+        <span style="font-size: 1.2rem;">🔔</span>
+        @if (UnreadCount > 0)
+        {
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem;">
+                @UnreadCount
+            </span>
+        }
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="notificationDropdown" style="width: 300px;">
+        @if (!Notifications.Any())
+        {
+            <li><span class="dropdown-item text-muted text-center">No notifications</span></li>
+        }
+        else
+        {
+            @foreach (var n in Notifications.Take(5))
+            {
+                <li>
+                    <a class="dropdown-item @(!n.IsRead ? "bg-light" : "")" href="#" @onclick="() => MarkAsRead(n)" @onclick:preventDefault>
+                        <div class="d-flex justify-content-between">
+                            <small class="text-primary fw-bold">@n.Type</small>
+                            <small class="text-muted" style="font-size: 0.7rem;">@n.CreatedAt.ToShortDateString()</small>
+                        </div>
+                        <div class="text-wrap @(!n.IsRead ? "fw-bold" : "")">
+                            @n.Title
+                        </div>
+                    </a>
+                </li>
+            }
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-center text-primary" href="/notifications">View All Notifications</a></li>
+        }
+    </ul>
+</div>
+
+@code {
+    [CascadingParameter] public IAuthService AuthState { get; set; }
+    private int UnreadCount = 0;
+    private IEnumerable<Notification> Notifications = new List<Notification>();
+
+    protected override void OnInitialized()
+    {
+        NotificationService.OnNewNotification += HandleNewNotification;
+        AuthState.OnLogin += RefreshNotifications;
+        AuthState.OnLogout += RefreshNotifications;
+        RefreshNotifications();
+    }
+
+    private void RefreshNotifications()
+    {
+        if (AuthState.IsLoggedIn)
+        {
+            UnreadCount = NotificationService.GetUnreadCount(AuthState.CurrentUser.Id);
+            Notifications = NotificationService.GetNotificationsForUser(AuthState.CurrentUser.Id);
+        }
+        else
+        {
+            UnreadCount = 0;
+            Notifications = new List<Notification>();
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleNewNotification(Notification notification)
+    {
+        if (!AuthState.IsLoggedIn) return;
+        if (notification.UserId == null || notification.UserId == AuthState.CurrentUser.Id)
+        {
+            RefreshNotifications();
+        }
+    }
+
+    private void MarkAsRead(Notification notification)
+    {
+        NotificationService.MarkAsRead(notification.Id);
+        RefreshNotifications();
+    }
+
+    public void Dispose()
+    {
+        NotificationService.OnNewNotification -= HandleNewNotification;
+        AuthState.OnLogin -= RefreshNotifications;
+        AuthState.OnLogout -= RefreshNotifications;
+    }
+}

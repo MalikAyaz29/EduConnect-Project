@@ -1,0 +1,22 @@
+<div class="card mb-3 shadow-sm border-0 bg-light">
+    <div class="card-body">
+        <h5 class="card-title text-primary">@Student.FullName</h5>
+        <h6 class="card-subtitle mb-2 text-muted">Major: @Student.Major</h6>
+        <p class="card-text mb-2">
+            <small>
+                <strong>Email:</strong> @Student.Email <br/>
+                <strong>Enrolled:</strong> @Student.EnrollmentDate.ToShortDateString()
+            </small>
+        </p>
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary btn-sm w-50" @onclick="() => OnEdit.InvokeAsync(Student)">Edit</button>
+            <button class="btn btn-outline-danger btn-sm w-50" @onclick="() => OnDelete.InvokeAsync(Student)">Delete</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Student Student { get; set; }
+    [Parameter] public EventCallback<Student> OnEdit { get; set; }
+    [Parameter] public EventCallback<Student> OnDelete { get; set; }
+}

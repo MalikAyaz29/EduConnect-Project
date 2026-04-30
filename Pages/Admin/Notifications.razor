@@ -1,0 +1,48 @@
+@page "/admin/notifications"
+@inject INotificationService NotificationService
+@inject NavigationManager Navigation
+
+<h3>Broadcast Notification</h3>
+
+<div class="card mt-4 shadow-sm border-0 bg-light">
+    <div class="card-body p-4">
+        <AlertBox Message="@SuccessMessage" Type="AlertType.Success" OnClose="() => SuccessMessage = null" />
+
+        <div class="mb-3">
+            <label class="form-label fw-bold">Notification Title</label>
+            <input type="text" class="form-control" @bind="Title" placeholder="Important Announcement" />
+        </div>
+        <div class="mb-4">
+            <label class="form-label fw-bold">Message Content</label>
+            <textarea class="form-control" rows="4" @bind="Message" placeholder="Type your broadcast message here..."></textarea>
+        </div>
+
+        <button class="btn btn-primary px-4 py-2" @onclick="Broadcast">Send to All Users</button>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter] public IAuthService AuthState { get; set; }
+    private string Title { get; set; } = "";
+    private string Message { get; set; } = "";
+    private string SuccessMessage;
+
+    protected override void OnInitialized()
+    {
+        if (!AuthState.IsLoggedIn || AuthState.CurrentUser.Role != Role.Admin)
+        {
+            Navigation.NavigateTo("/unauthorized");
+        }
+    }
+
+    private void Broadcast()
+    {
+        if (!string.IsNullOrWhiteSpace(Title) && !string.IsNullOrWhiteSpace(Message))
+        {
+            NotificationService.BroadcastNotification(Title, Message);
+            SuccessMessage = "Broadcast sent successfully to all users!";
+            Title = "";
+            Message = "";
+        }
+    }
+}

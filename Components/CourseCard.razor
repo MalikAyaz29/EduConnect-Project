@@ -1,0 +1,35 @@
+<div class="card mb-3 shadow-sm h-100">
+    <div class="card-body">
+        <h5 class="card-title">@Course.Code - @Course.Name</h5>
+        <h6 class="card-subtitle mb-2 text-muted">Credits: @Course.CreditHours</h6>
+        <p class="card-text">@Course.Description</p>
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <span class="badge @StatusBadgeClass">@Course.Status</span>
+            <span class="small text-muted fw-bold">@Course.CurrentEnrollmentCount / @Course.MaxCapacity</span>
+        </div>
+    </div>
+    @if (ShowEnrollButton)
+    {
+        <div class="card-footer bg-transparent border-top-0">
+            <button class="btn btn-success btn-sm w-100" 
+                    disabled="@(Course.Status == CourseStatus.Full)" 
+                    @onclick="() => OnEnroll.InvokeAsync(Course)">
+                Enroll Now
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public Course Course { get; set; }
+    [Parameter] public bool ShowEnrollButton { get; set; } = true;
+    [Parameter] public EventCallback<Course> OnEnroll { get; set; }
+
+    private string StatusBadgeClass => Course.Status switch
+    {
+        CourseStatus.Open => "bg-success",
+        CourseStatus.Full => "bg-danger",
+        CourseStatus.Closed => "bg-secondary",
+        _ => "bg-primary"
+    };
+}

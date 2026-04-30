@@ -1,0 +1,31 @@
+@if (!string.IsNullOrEmpty(Message))
+{
+    <div class="alert @AlertClass alert-dismissible fade show" role="alert">
+        @Message
+        <button type="button" class="btn-close" @onclick="CloseAlert" aria-label="Close"></button>
+    </div>
+}
+
+@code {
+    [Parameter] public string Message { get; set; }
+    [Parameter] public AlertType Type { get; set; } = AlertType.Info;
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private string AlertClass => Type switch
+    {
+        AlertType.Success => "alert-success",
+        AlertType.Error => "alert-danger",
+        AlertType.Warning => "alert-warning",
+        AlertType.Info => "alert-info",
+        _ => "alert-info"
+    };
+
+    private async Task CloseAlert()
+    {
+        Message = null;
+        if (OnClose.HasDelegate)
+        {
+            await OnClose.InvokeAsync();
+        }
+    }
+}

@@ -1,0 +1,83 @@
+@page "/notifications"
+@inject INotificationService NotificationService
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<h3>All Notifications</h3>
+
+<div class="mt-4">
+    @if (!AllNotifications.Any())
+    {
+        <div class="alert alert-light text-center py-5 text-muted border border-1">
+            <span class="fs-1 d-block mb-3">📭</span>
+            You have no notifications.
+        </div>
+    }
+    else
+    {
+        <div class="list-group shadow-sm">
+            @foreach (var n in AllNotifications)
+            {
+                <a href="#" class="list-group-item list-group-item-action @(!n.IsRead ? "list-group-item-info border-primary" : "")" @onclick="() => MarkAsRead(n)" @onclick:preventDefault>
+                    <div class="d-flex w-100 justify-content-between mb-2">
+                        <h5 class="mb-1 fw-bold @(!n.IsRead ? "text-primary" : "")">@n.Title</h5>
+                        <small class="text-muted">@n.CreatedAt.ToShortDateString() @n.CreatedAt.ToShortTimeString()</small>
+                    </div>
+                    <p class="mb-1 text-dark">@n.Message</p>
+                    <div class="mt-2">
+                        <span class="badge bg-secondary">@n.Type</span>
+                        @if (!n.IsRead)
+                        {
+                            <span class="badge bg-danger ms-1">New</span>
+                        }
+                    </div>
+                </a>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [CascadingParameter] public IAuthService AuthState { get; set; }
+    private IEnumerable<Notification> AllNotifications = new List<Notification>();
+
+    protected override void OnInitialized()
+    {
+        if (!AuthState.IsLoggedIn)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        RefreshNotifications();
+        NotificationService.OnNewNotification += HandleNewNotification;
+    }
+
+    private void RefreshNotifications()
+    {
+        AllNotifications = NotificationService.GetNotificationsForUser(AuthState.CurrentUser.Id);
+    }
+
+    private void MarkAsRead(Notification n)
+    {
+        if (!n.IsRead)
+        {
+            NotificationService.MarkAsRead(n.Id);
+            RefreshNotifications();
+        }
+    }
+
+    private void HandleNewNotification(Notification n)
+    {
+        if (n.UserId == null || n.UserId == AuthState.CurrentUser.Id)
+        {
+            RefreshNotifications();
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public void Dispose()
+    {
+        NotificationService.OnNewNotification -= HandleNewNotification;
+    }
+}

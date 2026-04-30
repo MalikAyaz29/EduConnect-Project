@@ -1,0 +1,41 @@
+@page "/admin/courses/add"
+@inject IRepository<Course> CourseRepo
+@inject NavigationManager Navigation
+
+<h3>Add New Course</h3>
+
+<div class="card mt-4 shadow-sm border-0">
+    <div class="card-body p-4">
+        <FormInput Label="Course Code" @bind-Value="Course.Code" Placeholder="e.g. CS101" />
+        <FormInput Label="Course Name" @bind-Value="Course.Name" Placeholder="Intro to CS" />
+        
+        <div class="mb-3">
+            <label class="form-label fw-bold">Credit Hours</label>
+            <input type="number" class="form-control" @bind="Course.CreditHours" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold">Max Capacity</label>
+            <input type="number" class="form-control" @bind="Course.MaxCapacity" />
+        </div>
+        
+        <button class="btn btn-success" @onclick="SaveCourse">Save</button>
+        <button class="btn btn-secondary ms-2" @onclick='() => Navigation.NavigateTo("/admin/courses")'>Cancel</button>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter] public IAuthService AuthState { get; set; }
+    private Course Course { get; set; } = new Course();
+
+    protected override void OnInitialized()
+    {
+        if (!AuthState.IsLoggedIn || AuthState.CurrentUser.Role != Role.Admin)
+            Navigation.NavigateTo("/unauthorized");
+    }
+
+    private void SaveCourse()
+    {
+        CourseRepo.Add(Course);
+        Navigation.NavigateTo("/admin/courses");
+    }
+}

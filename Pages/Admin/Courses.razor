@@ -1,0 +1,35 @@
+@page "/admin/courses"
+@inject ICourseService CourseService
+@inject NavigationManager Navigation
+
+<h3>Manage Course Catalog</h3>
+<p class="text-muted">Currently, admin can view all courses in the catalog.</p>
+
+<div class="row">
+    @foreach (var course in AllCourses)
+    {
+        <div class="col-md-4">
+            <CourseCard Course="course" ShowEnrollButton="false" />
+        </div>
+    }
+    @if (!AllCourses.Any())
+    {
+        <p class="text-muted">No courses available.</p>
+    }
+</div>
+
+@code {
+    [CascadingParameter] public IAuthService AuthState { get; set; }
+    private IEnumerable<Course> AllCourses = new List<Course>();
+
+    protected override void OnInitialized()
+    {
+        if (!AuthState.IsLoggedIn || AuthState.CurrentUser.Role != Role.Admin)
+        {
+            Navigation.NavigateTo("/unauthorized");
+            return;
+        }
+
+        AllCourses = CourseService.GetAllCourses();
+    }
+}

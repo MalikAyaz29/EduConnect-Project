@@ -1,0 +1,104 @@
+@inject NavigationManager Navigation
+@inject ICourseService CourseService
+@implements IDisposable
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <div class="container-fluid">
+        <a class="navbar-brand d-flex align-items-center" href="/dashboard">
+            <img src="/images/logo.jpeg" alt="Logo" style="height: 32px; margin-right: 12px; border-radius: 4px;" />
+            EduConnect
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                @if (AuthState.IsLoggedIn)
+                {
+                    <li class="nav-item"><a class="nav-link" href="/dashboard">Dashboard</a></li>
+                    
+                    @if (AuthState.CurrentUser.Role == Role.Admin)
+                    {
+                        <li class="nav-item"><a class="nav-link" href="/admin/students">Students</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/admin/courses">Courses</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/admin/reports/grades">Grades Report</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/admin/notifications">Notifications</a></li>
+                    }
+                    else if (AuthState.CurrentUser.Role == Role.Faculty)
+                    {
+                        <li class="nav-item"><a class="nav-link" href="/faculty/courses">My Courses</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/faculty/grades">Manage Grades</a></li>
+                    }
+                    else if (AuthState.CurrentUser.Role == Role.Student)
+                    {
+                        <li class="nav-item"><a class="nav-link" href="/student/enroll">Enroll</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/student/grades">My Grades</a></li>
+                    }
+                    <li class="nav-item"><a class="nav-link" href="/courses">Course Catalog</a></li>
+                }
+            </ul>
+            <div class="d-flex align-items-center">
+                @if (AuthState.IsLoggedIn)
+                {
+                    <NotificationBell />
+                    @if (AuthState.CurrentUser.Role == Role.Student)
+                    {
+                        <span class="badge bg-info ms-2 me-2">Credits: @GetTotalCredits()</span>
+                    }
+                    <span class="text-light ms-3 me-3">Welcome, @AuthState.CurrentUser.FirstName (@AuthState.CurrentUser.Role)</span>
+                    <button class="btn btn-outline-light btn-sm" @onclick="Logout">Logout</button>
+                }
+                else
+                {
+                    <a class="btn btn-primary btn-sm" href="/login">Login</a>
+                }
+            </div>
+        </div>
+    </div>
+</nav>
+
+@code {
+    [CascadingParameter] public IAuthService AuthState { get; set; }
+    
+    protected override void OnInitialized()
+    {
+        AuthState.OnLogin += () => InvokeAsync(StateHasChanged);
+        AuthState.OnLogout += () => InvokeAsync(StateHasChanged);
+        CourseService.OnEnrollmentChanged += () => InvokeAsync(StateHasChanged);
+    }
+
+    private void Logout()
+    {
+        AuthState.Logout();
+        Navigation.NavigateTo("/login");
+    }
+
+    private int GetTotalCredits()
+    {
+        if (AuthState.IsLoggedIn && AuthState.CurrentUser.Role == Role.Student)
+        {
+            var enrollments = CourseService.GetEnrollmentsByStudent(AuthState.CurrentUser.Id);
+            int total = 0;
+            foreach(var e in enrollments)
+            {
+                if (e.Status == EnrollmentStatus.Active)
+                {
+                    var course = CourseService.GetCourseById(e.CourseId);
+                    if (course != null)
+                    {
+                        total += course.CreditHours;
+                    }
+                }
+            }
+            return total;
+        }
+        return 0;
+    }
+
+    public void Dispose()
+    {
+        AuthState.OnLogin -= () => InvokeAsync(StateHasChanged);
+        AuthState.OnLogout -= () => InvokeAsync(StateHasChanged);
+        CourseService.OnEnrollmentChanged -= () => InvokeAsync(StateHasChanged);
+    }
+}

@@ -1,0 +1,18 @@
+# .NET
+[Bb]in/
+[Oo]bj/
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Static files and temp
+wwwroot/css/app.css.map
+.gemini/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,53 @@
+@page "/admin/reports"
+@page "/admin/reports/grades"
+@inject IStudentService StudentService
+@inject IGradeService GradeService
+@inject NavigationManager Navigation
+
+<h3>Reports & Analytics</h3>
+
+<div class="table-responsive mt-4">
+    <table class="table table-bordered table-striped align-middle bg-white shadow-sm">
+        <thead class="table-dark">
+            <tr>
+                <th>Student Name</th>
+                <th>Major</th>
+                <th>Enrolled Courses</th>
+                <th>CGPA</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var student in Students)
+            {
+                <tr>
+                    <td class="fw-bold text-primary">@student.FullName</td>
+                    <td>@student.Major</td>
+                    <td>@GradeService.GetGradesByStudent(student.Id).Count() recorded grades</td>
+                    <td><span class="badge bg-success fs-6">@GradeService.CalculateCGPA(student.Id).ToString("F2")</span></td>
+                </tr>
+            }
+            @if (!Students.Any())
+            {
+                <tr>
+                    <td colspan="4" class="text-center text-muted py-4">No students available in the system.</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [CascadingParameter] public IAuthService AuthState { get; set; }
+    private IEnumerable<Student> Students = new List<Student>();
+
+    protected override void OnInitialized()
+    {
+        if (!AuthState.IsLoggedIn || AuthState.CurrentUser.Role != Role.Admin)
+        {
+            Navigation.NavigateTo("/unauthorized");
+            return;
+        }
+
+        Students = StudentService.GetAllStudents();
+    }
+}

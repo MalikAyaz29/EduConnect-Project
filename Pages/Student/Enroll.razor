@@ -1,0 +1,77 @@
+@page "/student/enroll"
+@inject ICourseService CourseService
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<h3>Course Enrollment</h3>
+<p class="text-muted">Browse the catalog and enroll in available courses.</p>
+
+<AlertBox Message="@ErrorMessage" Type="AlertType.Error" OnClose="() => ErrorMessage = null" />
+<AlertBox Message="@SuccessMessage" Type="AlertType.Success" OnClose="() => SuccessMessage = null" />
+
+<div class="row mt-4">
+    @foreach (var course in AvailableCourses)
+    {
+        <div class="col-md-4 mb-3">
+            <CourseCard Course="course" ShowEnrollButton="!IsEnrolled(course.Id)" OnEnroll="EnrollInCourse" />
+            @if (IsEnrolled(course.Id))
+            {
+                <div class="alert alert-success mt-n3 rounded-bottom border-top-0 text-center py-2" role="alert" style="z-index: 1;">
+                    <strong class="small">✓ Currently Enrolled</strong>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [CascadingParameter] public IAuthService AuthState { get; set; }
+    private IEnumerable<Course> AvailableCourses = new List<Course>();
+    private IEnumerable<Enrollment> MyEnrollments = new List<Enrollment>();
+    private string ErrorMessage;
+    private string SuccessMessage;
+
+    protected override void OnInitialized()
+    {
+        if (!AuthState.IsLoggedIn || AuthState.CurrentUser.Role != Role.Student)
+        {
+            Navigation.NavigateTo("/unauthorized");
+            return;
+        }
+
+        CourseService.OnEnrollmentChanged += RefreshData;
+        RefreshData();
+    }
+
+    private void RefreshData()
+    {
+        AvailableCourses = CourseService.GetAllCourses();
+        MyEnrollments = CourseService.GetEnrollmentsByStudent(AuthState.CurrentUser.Id);
+        InvokeAsync(StateHasChanged);
+    }
+
+    private bool IsEnrolled(Guid courseId)
+    {
+        return MyEnrollments.Any(e => e.CourseId == courseId && e.Status == EnrollmentStatus.Active);
+    }
+
+    private void EnrollInCourse(Course course)
+    {
+        ErrorMessage = null;
+        SuccessMessage = null;
+        try
+        {
+            CourseService.EnrollStudent(AuthState.CurrentUser.Id, course.Id);
+            SuccessMessage = $"Successfully enrolled in {course.Name}!";
+        }
+        catch (CourseFullException ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+    }
+
+    public void Dispose()
+    {
+        CourseService.OnEnrollmentChanged -= RefreshData;
+    }
+}

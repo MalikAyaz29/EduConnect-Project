@@ -1,0 +1,63 @@
+@page "/admin/students/{id:guid}"
+@inject IStudentService StudentService
+@inject ICourseService CourseService
+@inject IGradeService GradeService
+@inject NavigationManager Navigation
+
+@if (Student == null)
+{
+    <LoadingSpinner IsVisible="true" />
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3>Student Details</h3>
+        <button class="btn btn-outline-secondary" @onclick='() => Navigation.NavigateTo("/admin/students")'>&larr; Back to Directory</button>
+    </div>
+
+    <div class="card mb-4 border-0 shadow-sm bg-light">
+        <div class="card-body">
+            <h4 class="text-primary fw-bold">@Student.FullName</h4>
+            <hr />
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Email:</strong> @Student.Email</p>
+                    <p><strong>Major:</strong> @Student.Major</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Enrollment Date:</strong> @Student.EnrollmentDate.ToShortDateString()</p>
+                    <p><strong>Cumulative GPA (CGPA):</strong> <span class="badge bg-primary fs-6">@GradeService.CalculateCGPA(Student.Id).ToString("F2")</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h4 class="mb-3">Academic Record</h4>
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <GradeTable Grades="StudentGrades" />
+        </div>
+    </div>
+}
+
+@code {
+    [CascadingParameter] public IAuthService AuthState { get; set; }
+    [Parameter] public Guid Id { get; set; }
+    private Student Student { get; set; }
+    private IEnumerable<GradeRecord> StudentGrades = new List<GradeRecord>();
+
+    protected override void OnInitialized()
+    {
+        if (!AuthState.IsLoggedIn || AuthState.CurrentUser.Role != Role.Admin)
+        {
+            Navigation.NavigateTo("/unauthorized");
+            return;
+        }
+
+        Student = StudentService.GetStudentById(Id);
+        if (Student != null)
+        {
+            StudentGrades = GradeService.GetGradesByStudent(Id);
+        }
+    }
+}

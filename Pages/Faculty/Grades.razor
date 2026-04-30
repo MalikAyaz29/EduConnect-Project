@@ -1,0 +1,129 @@
+@page "/faculty/grades"
+@inject ICourseService CourseService
+@inject IGradeService GradeService
+@inject IStudentService StudentService
+@inject NavigationManager Navigation
+
+<h3>Manage Student Grades</h3>
+
+<div class="mb-4 mt-4 p-3 bg-light rounded shadow-sm">
+    <label class="form-label fw-bold text-primary">Select a Course to Grade</label>
+    <select class="form-select form-select-lg" @onchange="OnCourseSelected">
+        <option value="">-- Choose Course --</option>
+        @foreach (var c in MyCourses)
+        {
+            <option value="@c.Id">@c.Code - @c.Name</option>
+        }
+    </select>
+</div>
+
+@if (SelectedCourseId != Guid.Empty)
+{
+    @if (!Enrollments.Any())
+    {
+        <p class="text-muted text-center py-5">No students are currently enrolled in this course.</p>
+    }
+    else
+    {
+        <AlertBox Message="@SuccessMessage" Type="AlertType.Success" OnClose="() => SuccessMessage = null" />
+        
+        <div class="table-responsive shadow-sm border rounded">
+            <table class="table table-hover table-striped align-middle mb-0 bg-white">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Student Name</th>
+                        <th>Current Marks</th>
+                        <th style="width: 250px;">Update Marks (0-100)</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var enrollment in Enrollments)
+                    {
+                        <tr>
+                            <td class="fw-bold">@GetStudentName(enrollment.StudentId)</td>
+                            <td>
+                                @if (GetExistingMarks(enrollment.StudentId) is double existing)
+                                {
+                                    <span class="badge bg-secondary">@existing</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">N/A</span>
+                                }
+                            </td>
+                            <td>
+                                <input type="number" class="form-control" min="0" max="100" @bind="MarksInput[enrollment.StudentId]" />
+                            </td>
+                            <td>
+                                <button class="btn btn-success" @onclick="() => SubmitMarks(enrollment.StudentId)">Save Grade</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+
+@code {
+    [CascadingParameter] public IAuthService AuthState { get; set; }
+    private IEnumerable<Course> MyCourses = new List<Course>();
+    private IEnumerable<Enrollment> Enrollments = new List<Enrollment>();
+    private Guid SelectedCourseId;
+    private Dictionary<Guid, double> MarksInput = new Dictionary<Guid, double>();
+    private string SuccessMessage;
+
+    protected override void OnInitialized()
+    {
+        if (!AuthState.IsLoggedIn || AuthState.CurrentUser.Role != Role.Faculty)
+        {
+            Navigation.NavigateTo("/unauthorized");
+            return;
+        }
+
+        MyCourses = CourseService.GetCoursesByFaculty(AuthState.CurrentUser.Id);
+    }
+
+    private void OnCourseSelected(ChangeEventArgs e)
+    {
+        SuccessMessage = null;
+        if (Guid.TryParse(e.Value?.ToString(), out Guid cid))
+        {
+            SelectedCourseId = cid;
+            Enrollments = CourseService.GetEnrollmentsByCourse(cid).Where(en => en.Status == EnrollmentStatus.Active);
+            
+            MarksInput.Clear();
+            foreach (var en in Enrollments)
+            {
+                MarksInput[en.StudentId] = GetExistingMarks(en.StudentId) ?? 0;
+            }
+        }
+        else
+        {
+            SelectedCourseId = Guid.Empty;
+            Enrollments = new List<Enrollment>();
+        }
+    }
+
+    private string GetStudentName(Guid studentId)
+    {
+        return StudentService.GetStudentById(studentId)?.FullName ?? "Unknown";
+    }
+
+    private double? GetExistingMarks(Guid studentId)
+    {
+        var grade = GradeService.GetGradesByCourse(SelectedCourseId).FirstOrDefault(g => g.StudentId == studentId);
+        return grade?.Marks;
+    }
+
+    private void SubmitMarks(Guid studentId)
+    {
+        if (MarksInput.TryGetValue(studentId, out double marks))
+        {
+            GradeService.SubmitGrade(studentId, SelectedCourseId, marks);
+            SuccessMessage = $"Grade successfully updated for {GetStudentName(studentId)}.";
+            StateHasChanged();
+        }
+    }
+}
