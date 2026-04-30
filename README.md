@@ -71,4 +71,4 @@ This project strictly adheres to the SOLID architectural principles:
 | **Student** | `student@educonnect.com` | `password` |
 
 ## 📄 License
-This project was developed for academic purposes as part of a .NET development assignment.
+This project was developed for academic purposes as part of a .NET development Task.
